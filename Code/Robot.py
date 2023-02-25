@@ -20,22 +20,39 @@ class Robot(object):
 
     def compute_distance(self, prev_config, next_config):
         '''
-        Compute the euclidean distance betweeen two given configurations.
+        Compute the Euclidean distance between two given configurations.
         @param prev_config Previous configuration.
         @param next_config Next configuration.
         '''
-        # TODO: Task 2.2
+        # TODO: Task 2.2 - DONE
+        
+        # If the cost is according to the position change
+        #prev_link_locs = self.compute_forward_kinematics(prev_config)
+        #next_link_locs = self.compute_forward_kinematics(next_config)
+        #diff_vec = [next_link_locs[i]-prev_link_locs[i] for i in range(len(prev_link_locs))]
 
-        pass
+        # If the cost is according to the angle change
+        diff_vec = np.subtract(next_config, prev_config)
+        return np.linalg.norm(diff_vec,2)
 
     def compute_forward_kinematics(self, given_config):
         '''
         Compute the 2D position (x,y) of each one of the links (including end-effector) and return.
         @param given_config Given configuration.
         '''
-        # TODO: Task 2.2
+        # TODO: Task 2.2 - DONE
 
-        pass
+        link_base = [0,0]
+        pos_vec = []
+        prev_angle = 0
+        for l in range(len(given_config)):
+            new_angle = self.compute_link_angle(prev_angle, given_config[l])
+            x = self.links[l]*np.cos(new_angle) + link_base[0]
+            y = self.links[l]*np.sin(new_angle) + link_base[1]
+            link_base = [x,y]
+            pos_vec.append(link_base)
+            prev_angle = new_angle
+        return np.array(pos_vec)
 
     def compute_ee_angle(self, given_config):
         '''
@@ -66,7 +83,8 @@ class Robot(object):
         Verify that the given set of links positions does not contain self collisions.
         @param robot_positions Given links positions.
         '''
-        # TODO: Task 2.2
+        # TODO: Task 2.2 - DONE
 
-        pass
+        arm = LineString(robot_positions)
+        return arm.is_simple
     

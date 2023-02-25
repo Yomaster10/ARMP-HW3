@@ -303,7 +303,8 @@ class MapEnvironment(object):
         # show map
         if show_map:
             #plt.show() # replace savefig with show if you want to display map actively
-            plt.savefig('map.png')
+            #plt.savefig('map.png')
+            plt.savefig('Output/map.png')
             
         return plt
 
@@ -450,4 +451,5 @@ class MapEnvironment(object):
         
         # store gif
         plan_time = datetime.now().strftime("%d-%m-%Y_%H-%M-%S")
-        imageio.mimsave(f'plan_{plan_time}.gif', plan_images, 'GIF', duration=0.05)
+        #imageio.mimsave(f'plan_{plan_time}.gif', plan_images, 'GIF', duration=0.05)
+        imageio.mimsave(f'Output/plan_{plan_time}.gif', plan_images, 'GIF', duration=0.05)
