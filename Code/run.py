@@ -3,6 +3,10 @@ from MapEnvironment import MapEnvironment
 from RRTMotionPlanner import RRTMotionPlanner
 from RRTInspectionPlanner import RRTInspectionPlanner
 
+# custom addition
+import warnings
+warnings.simplefilter("ignore", RuntimeWarning)
+
 if __name__ == "__main__":
     
     parser = argparse.ArgumentParser(description='script for testing planners')
@@ -28,4 +32,4 @@ if __name__ == "__main__":
     plan = planner.plan()
 
     # Visualize the final path.
-    planner.planning_env.visualize_plan(plan)
+    planner.planning_env.visualize_plan(plan, ext_mode=args.ext_mode, goal_prob=args.goal_prob, coverage=args.coverage)

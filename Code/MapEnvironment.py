@@ -50,6 +50,9 @@ class MapEnvironment(object):
         # if you want to - you can display starting map here
         #self.visualize_map(config=self.start)
 
+        # custom addition
+        self.step_size = 0.5
+
     def load_obstacles(self, obstacles):
         '''
         A function to load and verify scene obstacles.
@@ -411,7 +414,7 @@ class MapEnvironment(object):
         else:
             return angle
 
-    def visualize_plan(self, plan):
+    def visualize_plan(self, plan, ext_mode, goal_prob, coverage):
         '''
         Visualize the final plan as a GIF and stores it.
         @param plan Sequence of configs defining the plan.
@@ -452,4 +455,15 @@ class MapEnvironment(object):
         # store gif
         plan_time = datetime.now().strftime("%d-%m-%Y_%H-%M-%S")
         #imageio.mimsave(f'plan_{plan_time}.gif', plan_images, 'GIF', duration=0.05)
-        imageio.mimsave(f'Output/plan_{plan_time}.gif', plan_images, 'GIF', duration=0.05)
+        #imageio.mimsave(f'Output/plan_{plan_time}.gif', plan_images, 'GIF', duration=0.05)
+        if self.task == 'mp':
+            if ext_mode == 'E1':
+                gif_name = f'Output/Plan_MP_E1_GoalBias={goal_prob}.gif'
+            else:
+                gif_name = f'Output/Plan_MP_E2_GoalBias={goal_prob}_StepSize={self.step_size}.gif'
+        else:
+            if ext_mode == 'E1':
+                gif_name = f'Output/Plan_IP_E1_GoalBias={goal_prob}_Coverage={coverage}.gif'
+            else:
+                gif_name = f'Output/Plan_IP_E2_GoalBias={goal_prob}_StepSize={self.step_size}_Coverage={coverage}.gif'
+        imageio.mimsave(gif_name, plan_images, 'GIF', duration=0.05)

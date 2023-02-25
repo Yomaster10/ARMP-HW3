@@ -16,10 +16,7 @@ class RRTMotionPlanner(object):
 
         ## custom addition
         # set step size for extensions
-        #if planning_env.ylimit[1] < 100:
-        #    self.step_size = 0.2
-        #else:
-        self.step_size = 10
+        self.step_size = planning_env.step_size
 
     def plan(self):
         '''
@@ -30,7 +27,7 @@ class RRTMotionPlanner(object):
         # initialize an empty plan.
         plan = []
 
-        # TODO: Task 2.3
+        # TODO: Task 2.3 - DONE
 
         env = self.planning_env
         self.tree.add_vertex(env.start)
@@ -53,7 +50,6 @@ class RRTMotionPlanner(object):
                 continue
             
             nearest_vert = self.tree.get_nearest_config(config)
-            #print(nearest_vert)
             nearest_vert_idx = nearest_vert[0]
 
             # Partial extensions, if enabled
@@ -97,7 +93,7 @@ class RRTMotionPlanner(object):
         Compute and return the plan cost, which is the sum of the distances between steps in the configuration space.
         @param plan A given plan for the robot.
         '''
-        # TODO: Task 2.3 - Check if it works
+        # TODO: Task 2.3 - DONE
         
         return self.tree.get_vertex_for_config(plan[-1]).cost
 
@@ -107,20 +103,15 @@ class RRTMotionPlanner(object):
         @param near_config The nearest configuration to the sampled configuration.
         @param rand_config The sampled configuration.
         '''
-        # TODO: Task 2.3
+        # TODO: Task 2.3 - DONE
+
         goal = False
         goal_config = self.planning_env.goal
-
-        #if (rand_config[0]==goal_config[0] and rand_config[1]==goal_config[1]):
         if np.allclose(rand_config, goal_config):
             goal = True
 
-        #vec = [rand_config[i]-near_config[i] for i in range(2)]
         vec = np.subtract(rand_config, near_config) 
-
-        #vec_mag = np.sqrt(sum(j**2 for j in vec))
         vec_mag = np.linalg.norm(vec,2)
-
         unit_vec = vec / vec_mag
 
         new_vec = self.step_size * unit_vec
@@ -133,4 +124,3 @@ class RRTMotionPlanner(object):
             goal_added = True
 
         return new_config, goal_added
-    

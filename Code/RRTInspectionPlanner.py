@@ -15,6 +15,10 @@ class RRTInspectionPlanner(object):
         self.goal_prob = goal_prob
         self.coverage = coverage
 
+        ## custom addition
+        # set step size for extensions
+        self.step_size = planning_env.step_size
+
     def plan(self):
         '''
         Compute and return the plan. The function should return a numpy array containing the states in the configuration space.
@@ -40,9 +44,9 @@ class RRTInspectionPlanner(object):
         Compute and return the plan cost, which is the sum of the distances between steps in the configuration space.
         @param plan A given plan for the robot.
         '''
-        # TODO: Task 2.4
-
-        pass
+        # TODO: Task 2.4 - DONE
+        
+        return self.tree.get_vertex_for_config(plan[-1]).cost
 
     def extend(self, near_config, rand_config):
         '''
@@ -50,8 +54,24 @@ class RRTInspectionPlanner(object):
         @param near_config The nearest configuration to the sampled configuration.
         @param rand_config The sampled configuration.
         '''
-        # TODO: Task 2.4
+        # TODO: Task 2.4 - DONE
 
-        pass
+        goal = False
+        goal_config = self.planning_env.goal
+        if np.allclose(rand_config, goal_config):
+            goal = True
 
-    
+        vec = np.subtract(rand_config, near_config) 
+        vec_mag = np.linalg.norm(vec,2)
+        unit_vec = vec / vec_mag
+
+        new_vec = self.step_size * unit_vec
+        new_config = near_config + new_vec
+
+        # check if this intersects the goal or not
+        goal_added = False
+        if goal and vec_mag < self.step_size:
+            new_config = goal_config
+            goal_added = True
+
+        return new_config, goal_added
