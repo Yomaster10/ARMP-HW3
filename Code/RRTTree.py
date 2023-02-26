@@ -9,7 +9,7 @@ class RRTTree(object):
         self.vertices = {}
         self.edges = {}
 
-        # inspecion planning properties
+        # inspection planning properties
         if self.task == "ip":
             self.max_coverage = 0
             self.max_coverage_id = 0

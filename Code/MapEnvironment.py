@@ -50,7 +50,7 @@ class MapEnvironment(object):
         # if you want to - you can display starting map here
         #self.visualize_map(config=self.start)
 
-        # custom addition
+        ## custom addition
         self.step_size = 0.5
 
     def load_obstacles(self, obstacles):
@@ -229,9 +229,15 @@ class MapEnvironment(object):
         @param points1 list of inspected points.
         @param points2 list of inspected points.
         '''
-        # TODO: Task 2.4
-
-        pass
+        # TODO: Task 2.4 - DONE
+        # check if one of the lists is empty (can't concatenate empty list with non-empty list)
+        if len(points1) == 0:
+            return points2
+        elif len(points2) == 0:
+            return points1
+        
+        # return the unique points in the concatenation of the two sets (i.e. the union)
+        return np.unique(np.concatenate([points1, points2]), axis=0)
 
     def compute_coverage(self, inspected_points):
         '''
@@ -279,7 +285,8 @@ class MapEnvironment(object):
 
         return plan_inspected
 
-    def visualize_map(self, config, show_map=True):
+    # made some custom changes here for the sake of visualizing the RRT tree during runs
+    def visualize_map(self, config, show_map=True, tree_edges=None, best_configs=None, best_inspected_pts=None):
         '''
         Visualize map with current config of robot and obstacles in the map.
         @param config The requested configuration of the robot.
@@ -291,12 +298,21 @@ class MapEnvironment(object):
         # add obstacles
         plt = self.visualize_obstacles(plt=plt)
 
+        # add tree edges if given - custom addition
+        if tree_edges is not None:
+            plt = self.visualize_tree_edges(plt=plt, tree_edges=tree_edges, color='lightgrey')
+
         # add start
         plt = self.visualize_point_location(plt=plt, config=self.start, color='r')
 
+        if best_configs is not None:
+            for p in best_configs:
+                plt = self.visualize_point_location(plt=plt, config=p, color='lime', zorder=10)
+
         # add goal or inspection points
         if self.task == 'ip':
-            plt = self.visualize_inspection_points(plt=plt)
+            #plt = self.visualize_inspection_points(plt=plt)
+            plt = self.visualize_inspection_points(plt=plt, inspected_points=best_inspected_pts) #custom addition
         else: # self.task == 'mp'
             plt = self.visualize_point_location(plt=plt, config=self.goal, color='g')
 
@@ -321,6 +337,19 @@ class MapEnvironment(object):
         plt.imshow(back_img, origin='lower', zorder=0)
 
         return plt
+    
+    ## Custom addition
+    def visualize_tree_edges(self, plt, tree_edges, color):
+        '''
+        Draw the set of the given tree edges on top of the given frame.
+        @param plt Plot of a frame of the environment.
+        @param tree_edges The requested set of edges.
+        @param color The requested color for the plan.
+        '''
+        # add plan edges to the plt
+        for tree_edge in tree_edges:
+            plt.plot([tree_edge[0][0],tree_edge[1][0]], [tree_edge[0][1],tree_edge[1][1]], color=color, zorder=10)
+        return plt
 
     def visualize_obstacles(self, plt):
         '''
@@ -334,7 +363,7 @@ class MapEnvironment(object):
 
         return plt
     
-    def visualize_point_location(self, plt, config, color):
+    def visualize_point_location(self, plt, config, color, zorder=5):
         '''
         Draw a point of start/goal on top of the given frame.
         @param plt Plot of a frame of the plan.
@@ -345,7 +374,7 @@ class MapEnvironment(object):
         point_loc = self.robot.compute_forward_kinematics(given_config=config)[-1]
 
         # draw the circle
-        point_circ = plt.Circle(point_loc, radius=5, color=color, zorder=5)
+        point_circ = plt.Circle(point_loc, radius=5, color=color, zorder=zorder)
         plt.gca().add_patch(point_circ)
     
         return plt

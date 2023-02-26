@@ -25,13 +25,6 @@ class Robot(object):
         @param next_config Next configuration.
         '''
         # TODO: Task 2.2 - DONE
-        
-        # If the cost is according to the position change
-        #prev_link_locs = self.compute_forward_kinematics(prev_config)
-        #next_link_locs = self.compute_forward_kinematics(next_config)
-        #diff_vec = [next_link_locs[i]-prev_link_locs[i] for i in range(len(prev_link_locs))]
-
-        # If the cost is according to the angle change
         diff_vec = np.subtract(next_config, prev_config)
         return np.linalg.norm(diff_vec,2)
 
@@ -41,7 +34,6 @@ class Robot(object):
         @param given_config Given configuration.
         '''
         # TODO: Task 2.2 - DONE
-
         link_base = [0,0]
         pos_vec = []
         prev_angle = 0
@@ -84,7 +76,5 @@ class Robot(object):
         @param robot_positions Given links positions.
         '''
         # TODO: Task 2.2 - DONE
-
         arm = LineString(robot_positions)
         return arm.is_simple
-    
