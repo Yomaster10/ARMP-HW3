@@ -18,7 +18,7 @@ class RRTMotionPlanner(object):
         # set step size for extensions
         self.step_size = planning_env.step_size
 
-    def plan(self):
+    def plan(self, stats_mode=False):
         '''
         Compute and return the plan. The function should return a numpy array containing the states in the configuration space.
         '''
@@ -29,6 +29,7 @@ class RRTMotionPlanner(object):
 
         # TODO: Task 2.3 - DONE
 
+        # Initialize the tree
         env = self.planning_env
         self.tree.add_vertex(env.start)
         
@@ -37,18 +38,19 @@ class RRTMotionPlanner(object):
             num_iter += 1
             goal = False
 
-            # Here we add goal biasing
-            p = np.random.uniform()
+            # Sampling step
+            p = np.random.uniform() # goal biasing
             if p < self.goal_prob:
                 config = env.goal
                 goal = True
             else:
                 config = np.random.uniform(low=-np.pi, high=np.pi, size=(4,))
             
-            # Is the sample in the free space?
+            # Verify that the sample is in free space
             if not env.config_validity_checker(config):
                 continue
             
+            # Get nearest vertex to the sample
             nearest_vert = self.tree.get_nearest_config(config)
             nearest_vert_idx = nearest_vert[0]
 
@@ -58,7 +60,7 @@ class RRTMotionPlanner(object):
                 if not env.config_validity_checker(config):
                     continue
             
-            # Does the edge between the sample and its nearest tree node collide with any obstacles?
+            # Check obstacle-collision for potential edge
             if env.edge_validity_checker(config, nearest_vert[1]):
                 config_idx = self.tree.add_vertex(config, nearest_vert)
                 cost = env.robot.compute_distance(config, nearest_vert[1])
@@ -68,6 +70,7 @@ class RRTMotionPlanner(object):
             else:
                 goal_added = False
 
+        # Record the plan
         plan.append(config)
         child_idx = config_idx
         parent_config = nearest_vert[1]
@@ -80,13 +83,20 @@ class RRTMotionPlanner(object):
         plan.append(parent_config)
         plan = plan[::-1]
 
+        total_cost = self.compute_cost(plan)
+        duration = time.time()-start_time
+
+        if stats_mode:
+            return np.array(plan), [total_cost,num_iter,duration]
+
+        # Print total number of iterations
         print(f"Total number of iterations needed to reach goal: {num_iter}")
     
-        # print total path cost and time
-        print('Total cost of path: {:.2f}'.format(self.compute_cost(plan)))
-        print('Total time: {:.2f}'.format(time.time()-start_time))
-
-        return np.array(plan)
+        # Print total path cost and time
+        print('Total cost of path: {:.2f}'.format(total_cost))
+        print('Total time: {:.2f}'.format(duration))
+            
+        return np.array(plan), None
 
     def compute_cost(self, plan):
         '''
@@ -114,13 +124,14 @@ class RRTMotionPlanner(object):
         vec_mag = np.linalg.norm(vec,2)
         unit_vec = vec / vec_mag
 
+        # Projection of the step size in the direction of the neighbor
         new_vec = self.step_size * unit_vec
-        new_config = near_config + new_vec
+        new_config = near_config + new_vec # New sample point
 
-        # check if this intersects the goal or not
+        # Check if this overshoots the goal, if yes return the goal
         goal_added = False
         if goal and vec_mag < self.step_size:
             new_config = goal_config
-            goal_added = True
+            goal_added = True # Tells the motion planner to terminate
 
         return new_config, goal_added

@@ -28,7 +28,7 @@ class RRTInspectionPlanner(object):
         self.best_config = None
         #self.best_loc = None
 
-    def plan(self):
+    def plan(self, stats_mode=False):
         '''
         Compute and return the plan. The function should return a numpy array containing the states in the configuration space.
         '''
@@ -143,8 +143,9 @@ class RRTInspectionPlanner(object):
             self.update_best()
             if current_coverage < self.tree.max_coverage:
                 reset_counter = 0
-                print(f"New Coverage: {self.tree.max_coverage:.03}, Iteration: {num_iter}, Bias: {self.goal_prob:.03}")
-                env.visualize_map(config=self.best_config, show_map=True, tree_edges=self.get_edges_as_locs(), 
+                if not stats_mode:
+                    print(f"New Coverage: {self.tree.max_coverage:.03}, Iteration: {num_iter}, Bias: {self.goal_prob:.03}")
+                    env.visualize_map(config=self.best_config, show_map=True, tree_edges=self.get_edges_as_locs(), 
                                   best_configs=self.get_configs_along_best_path(self.best_config), best_inspected_pts=self.best_pts)
             else:
                 reset_counter += 1
@@ -162,11 +163,18 @@ class RRTInspectionPlanner(object):
         plan.append(parent_config)
         plan = plan[::-1]
 
+        total_cost = self.compute_cost(plan)
+        duration = time.time()-start_time
+
+        if stats_mode:
+            return np.array(plan), [total_cost,num_iter,duration]
+
         # Print total number of iterations, path cost, and time
         print(f"Total number of iterations needed to reach goal: {num_iter}")
-        print('Total cost of path: {:.2f}'.format(self.compute_cost(plan)))
-        print('Total time: {:.2f}'.format(time.time()-start_time))
-        return np.array(plan)
+        print('Total cost of path: {:.2f}'.format(total_cost))
+        print('Total time: {:.2f}'.format(duration))
+
+        return np.array(plan), None
 
     def compute_cost(self, plan):
         '''
