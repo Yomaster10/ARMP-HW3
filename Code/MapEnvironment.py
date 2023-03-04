@@ -389,7 +389,7 @@ class MapEnvironment(object):
 
         # if given inspected points
         if inspected_points is not None and len(inspected_points) > 0:
-            plt.scatter(inspected_points[:,0], inspected_points[:,1], color='g', zorder=6, s=3)
+            plt.scatter(np.array(inspected_points)[:,0], np.array(inspected_points)[:,1], color='g', zorder=6, s=3)
 
         return plt
 
@@ -449,7 +449,8 @@ class MapEnvironment(object):
         @param plan Sequence of configs defining the plan.
         '''
         # switch backend - possible bugfix if animation fails
-        matplotlib.use('TkAgg')
+        #matplotlib.use('TkAgg')
+        matplotlib.use('agg')
 
         # interpolate plan and get inspected points
         plan = self.interpolate_plan(plan_configs=plan)

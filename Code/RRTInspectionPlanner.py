@@ -17,7 +17,7 @@ class RRTInspectionPlanner(object):
 
         ## custom additions
         self.step_size = planning_env.step_size # for extensions
-        self.decay = 10**-5 # for bias parameter decay
+        self.decay = 10**-3 # for bias parameter decay
         self.adaptive = True # if True, then bias parameter decay is enabled
 
         self.all_insp_pts = self.planning_env.inspection_points
@@ -49,11 +49,12 @@ class RRTInspectionPlanner(object):
         while self.tree.max_coverage < self.coverage:
             rewire_successful = False
             num_iter += 1
-            #if num_iter % 10000 == 0:
+            if num_iter % 10000 == 0:# and not stats_mode:
             #    print(self.points_inspected)
-            #    print(num_iter, time.time()-start_time)
-            #    env.visualize_map(config=best_config, show_map=True, tree_edges=self.get_edges_as_locs(), 
-            #                      best_configs=self.get_configs_along_best_path(best_config), best_inspected_pts=best_pts)
+                print(f"\tIter: {num_iter}, Time: {time.time()-start_time:0.2f} [sec]")
+                if not stats_mode:
+                    env.visualize_map(config=self.best_config, show_map=True, tree_edges=self.get_edges_as_locs(), 
+                                  best_configs=self.get_configs_along_best_path(self.best_config), best_inspected_pts=self.best_pts)
  
             current_coverage = self.tree.max_coverage
             #if current_coverage > 1:
@@ -70,8 +71,12 @@ class RRTInspectionPlanner(object):
                 # In this biasing method, we sample configs until one is found which sees a point not yet seen by the best path
                 if method1:
                     new_cov = -1
-                    while new_cov < self.tree.max_coverage: # bias towards configs with better coverage opportunities
+                    count = 0
+                    while count < 1000 and new_cov < self.tree.max_coverage: # bias towards configs with better coverage opportunities
                         config = np.random.uniform(low=-np.pi, high=np.pi, size=(4,))
+                        count += 1
+                        if not env.config_validity_checker(config): # ensure that the sampled configuration is valid
+                            continue
                         pts = env.get_inspected_points(config)
                         new_pts = env.compute_union_of_points(pts, self.best_pts)
                         new_cov = env.compute_coverage(inspected_points=new_pts)
@@ -95,7 +100,7 @@ class RRTInspectionPlanner(object):
                 # If we go 1,000 iterations without improving the max. coverage, then we should attempt to rewire the tree
                 if reset_counter > 1000:
                     reset_counter = 0
-                    rewire_successful = self.rewire() # True if the rewire succeeded
+                    rewire_successful = self.rewire(stats_mode=stats_mode) # True if the rewire succeeded
                     #if rewire_successful:
                     #    config = pot_config
 
@@ -147,21 +152,44 @@ class RRTInspectionPlanner(object):
                     print(f"New Coverage: {self.tree.max_coverage:.03}, Iteration: {num_iter}, Bias: {self.goal_prob:.03}")
                     env.visualize_map(config=self.best_config, show_map=True, tree_edges=self.get_edges_as_locs(), 
                                   best_configs=self.get_configs_along_best_path(self.best_config), best_inspected_pts=self.best_pts)
+                else:
+                    if rewire_successful:
+                        print(f"\tNew Coverage: {self.tree.max_coverage:.03}, Iteration: {num_iter}, Bias: {self.goal_prob:.03} - with Rewire")
+                    else:   
+                        print(f"\tNew Coverage: {self.tree.max_coverage:.03}, Iteration: {num_iter}, Bias: {self.goal_prob:.03}")
             else:
                 reset_counter += 1
+
+            if self.tree.max_coverage >= self.coverage:
+                break
+
+            if time.time()-start_time > 300:
+                print("Time ran out...")
+                return None, None
+            
+        self.update_best()
+
+        print("Done 1")
 
         plan.append(self.best_config)
         child_idx = self.best_idx
         parent_idx = self.tree.edges[child_idx] 
         parent_config = self.tree.vertices[parent_idx].config
+        counter = 0
         while self.tree.edges[child_idx]:
+            counter += 1
             plan.append(parent_config)
             child_idx = self.tree.get_idx_for_config(parent_config)
             # new parent
             parent_idx = self.tree.edges[child_idx] 
             parent_config = self.tree.vertices[parent_idx].config
+            if counter > 10:
+                print(counter)
+                print(parent_idx, child_idx)
         plan.append(parent_config)
         plan = plan[::-1]
+
+        print("Done 2")
 
         total_cost = self.compute_cost(plan)
         duration = time.time()-start_time
@@ -172,7 +200,7 @@ class RRTInspectionPlanner(object):
         # Print total number of iterations, path cost, and time
         print(f"Total number of iterations needed to reach goal: {num_iter}")
         print('Total cost of path: {:.2f}'.format(total_cost))
-        print('Total time: {:.2f}'.format(duration))
+        print('Total time: {:.2f} [sec]'.format(duration))
 
         return np.array(plan), None
 
@@ -205,41 +233,68 @@ class RRTInspectionPlanner(object):
         # when a new max. coverage vertex is found, we should update all of the attributes related to the best path
         self.best_idx = self.tree.max_coverage_id
         best_vert = self.tree.vertices[self.best_idx]
-        self.best_pts = best_vert.inspected_points
+        #self.best_pts = [list(b) for b in best_vert.inspected_points] # check
+        self.best_pts = [tuple(b) for b in best_vert.inspected_points] # check
         self.best_config = best_vert.config
         return
 
-    def rewire(self):
-        print()
-        print("Rewiring Initiated...")
+    def rewire(self, stats_mode):
+        if not stats_mode:
+        #if stats_mode:
+            print()
+            print("Rewiring Initiated...")
 
         # Step 1: Check which points have been seen in other paths but not in the current best path (if there are any)
         missing_pts = []
         for p in self.points_inspected:
-            if list(p) not in self.best_pts:
+            if tuple(p) not in self.best_pts:
+            #if list(p) not in self.best_pts:
                 missing_pts.append(p)
+        # If missing_pts is still empty at this point, this means that all the inspected points we've seen so far are seen along the best path
         
         if len(missing_pts) == 0:
-            print("\tNo missing points! Attempting to produce new ones...")
+            if not stats_mode:
+                print("\tNo missing points! Attempting to produce new ones...")
             for i in self.all_insp_pts:
                 if tuple(i) not in list(self.points_inspected.keys()):
                     count = 0
                     not_found = True
-                    while count < 1000 and not_found: # bias towards configs with better coverage opportunities
+                    while count < 10000 and not_found: # bias towards configs with better coverage opportunities
                         config = np.random.uniform(low=-np.pi, high=np.pi, size=(4,))
+                        if not self.planning_env.config_validity_checker(config) or not self.planning_env.edge_validity_checker(config, self.best_config): # ensure that the sampled configuration is valid
+                            continue
                         pts = self.planning_env.get_inspected_points(config)
                         if i in pts:
                             missing_pts.append(tuple(i))
                             not_found = False
                             self.points_inspected[tuple(i)] = [config] # check that this line works as expected
+                        #if not not_found:
+                            new_idx = self.tree.add_vertex(config, inspected_points=pts) # fake vertex
+                            self.tree.add_edge(new_idx, 0, edge_cost=0) # fake edge
                             # Todo: Check that this loop works as intended
                         count += 1
+                    if not_found and not stats_mode:
+                        print("\t\tBad Morb :(")
+                else:
+                    #print(i, type(i))
+                    #print(self.best_pts, type(self.best_pts))
+                    #if i in self.best_pts:
+                    #    print('wee')
+
+                    #if list(i) not in self.best_pts:
+                    if tuple(i) not in self.best_pts: # This should never occur
+                        print("uwu?")
+                        print(self.points_inspected)
+                        print(tuple(i))
+                        print(list(self.best_pts))
+            print()
         if len(missing_pts) == 0:
             return False 
 
-        print('\tPoints Seen: ', list(self.points_inspected.keys()))
-        print('\tCurrent Best Points: ', [tuple(b) for b in self.best_pts])
-        print('\tMissing Points: ', missing_pts)
+        if not stats_mode:
+            print('\tPoints Seen: ', list(self.points_inspected.keys()))
+            print('\tCurrent Best Points: ', self.best_pts)
+            print('\tMissing Points: ', missing_pts)
 
         # Step 2: For each missing point, see if there exists a non-collisional path to it,
         # and if so calculate the minimum cost for doing so (among all missing points)
@@ -256,8 +311,9 @@ class RRTInspectionPlanner(object):
         # Step 3: If a valid path was found to a missing point's config, then rewire the tree such that the current best path leads
         # to that config (i.e. the vertex corresponding to that config will be updated)
         if new_config is not None:
-            print("It's Morbin' Time!")
-            print("\tCoverage Pre-Morb: ", self.tree.max_coverage)
+            if not stats_mode:
+                print("It's Morbin' Time!")
+                print(f"\tCoverage Pre-Morb: {self.tree.max_coverage:0.3f}")
         
             insp_pts_new = self.planning_env.get_inspected_points(new_config) # check all points seen by the new config
             insp_pts_newer = self.planning_env.compute_union_of_points(self.best_pts, insp_pts_new) # take the union of the inspected points of the parent and child vertex
@@ -273,7 +329,8 @@ class RRTInspectionPlanner(object):
             self.tree.max_coverage_id = old_idx
             self.update_best()
 
-            print("\tCoverage Post-Morb: ", self.tree.max_coverage, "\n")
+            if not stats_mode:
+                print(f"\tCoverage Post-Morb: {self.tree.max_coverage:0.3f}\n")
             return True
         return False
 
