@@ -88,10 +88,10 @@ if __name__ == "__main__":
             batch = [['E1',0.05],['E2',0.05],['E1',0.2],['E2',0.2]]
             coverage = args.coverage
         else:
-            batch = [['E1',0.5],['E2',0.5],['E1',0.75],['E2',0.75]]
+            batch = [['E1',0.5],['E2',0.5]]#,['E1',0.75],['E2',0.75]]
             goal_prob = args.goal_prob
 
-        for j in range(4):
+        for j in range(len(batch)):
             print(f"\nNew batch initiated with parameters: {batch[j][0],batch[j][1]}")
             costs = []; iters = []; times = []
             for i in range(10):
@@ -103,7 +103,9 @@ if __name__ == "__main__":
                 else:
                     coverage = batch[j][1]
 
-                _, results = one_run(map=args.map, task=args.task, ext_mode=ext_mode, goal_prob=goal_prob, coverage=coverage, stats_mode=True)
+                results = None
+                while results is None:
+                    _, results = one_run(map=args.map, task=args.task, ext_mode=ext_mode, goal_prob=goal_prob, coverage=coverage, stats_mode=True)
 
                 costs.append(results[0])
                 iters.append(results[1])
