@@ -14,8 +14,7 @@ class RRTMotionPlanner(object):
         self.ext_mode = ext_mode
         self.goal_prob = goal_prob
 
-        ## custom addition
-        # set step size for extensions
+        # set step size for extensions (custom)
         self.step_size = planning_env.step_size
 
     def plan(self, stats_mode=False):
@@ -86,17 +85,14 @@ class RRTMotionPlanner(object):
         total_cost = self.compute_cost(plan)
         duration = time.time()-start_time
 
-        if stats_mode:
-            return np.array(plan), [total_cost,num_iter,duration]
+        if not stats_mode:
+            # Print total number of iterations
+            print(f"Total number of iterations needed to reach goal: {num_iter}")
+            # Print total path cost and time
+            print('Total cost of path: {:.2f}'.format(total_cost))
+            print('Total time: {:.2f}'.format(duration))
 
-        # Print total number of iterations
-        print(f"Total number of iterations needed to reach goal: {num_iter}")
-    
-        # Print total path cost and time
-        print('Total cost of path: {:.2f}'.format(total_cost))
-        print('Total time: {:.2f}'.format(duration))
-            
-        return np.array(plan), None
+        return np.array(plan), [total_cost,num_iter,duration]
 
     def compute_cost(self, plan):
         '''

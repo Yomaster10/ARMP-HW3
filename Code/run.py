@@ -52,10 +52,10 @@ if __name__ == "__main__":
             raise ValueError('Unknown task option: %s' % args.task);
 
         # execute plan
-        plan, _ = planner.plan()
+        plan, results = planner.plan()
 
         # Visualize the final path.
-        planner.planning_env.visualize_plan(plan, ext_mode=args.ext_mode, goal_prob=args.goal_prob, coverage=args.coverage)
+        planner.planning_env.visualize_plan(plan, ext_mode=args.ext_mode, goal_prob=args.goal_prob, coverage=args.coverage, cost=results[0])
     
     elif args.stats:
         print(f"Initiating statistics mode...")
@@ -88,7 +88,7 @@ if __name__ == "__main__":
             batch = [['E1',0.05],['E2',0.05],['E1',0.2],['E2',0.2]]
             coverage = args.coverage
         else:
-            batch = [['E1',0.5],['E2',0.5]]#,['E1',0.75],['E2',0.75]]
+            batch = [['E1',0.5],['E2',0.5],['E1',0.75],['E2',0.75]]
             goal_prob = args.goal_prob
 
         for j in range(len(batch)):

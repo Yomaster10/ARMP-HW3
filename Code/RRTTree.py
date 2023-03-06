@@ -20,13 +20,13 @@ class RRTTree(object):
         '''
         return 0
 
-    def add_vertex(self, config, inspected_points=None):#, parents=None):
+    def add_vertex(self, config, inspected_points=None):
         '''
         Add a state to the tree.
         @param config Configuration to add to the tree.
         '''
         vid = len(self.vertices)
-        self.vertices[vid] = RRTVertex(config=config, inspected_points=inspected_points)#, parents=parents)
+        self.vertices[vid] = RRTVertex(config=config, inspected_points=inspected_points)
 
         # check if vertex has the highest coverage so far, and replace if so
         if self.task == "ip":
@@ -93,14 +93,11 @@ class RRTTree(object):
 
 class RRTVertex(object):
 
-    def __init__(self, config, cost=0, inspected_points=None):#, parents=[]):
+    def __init__(self, config, cost=0, inspected_points=None):
 
         self.config = config
         self.cost = cost
         self.inspected_points = inspected_points
-        
-        # custom addition - for cycle-checking
-        #self.parents = list(set(parents))
 
     def set_cost(self, cost):
         '''

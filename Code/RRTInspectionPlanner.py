@@ -31,7 +31,7 @@ class RRTInspectionPlanner(object):
         start_time = time.time()
         plan = [] # initialize an empty plan
 
-        # TODO: Task 2.4
+        # TODO: Task 2.4 - DONE
         orig_goal_prob = self.goal_prob
         env = self.planning_env
 
@@ -42,12 +42,6 @@ class RRTInspectionPlanner(object):
         num_iter = 0; reset_counter = 0; thresh = 1000
         while self.tree.max_coverage < self.coverage:
             rewire_successful = False;num_iter += 1
-
-            #if num_iter % 10000 == 0 and not stats_mode:
-            #    print(f"\tIter: {num_iter}, Time: {time.time()-start_time:0.2f} [sec]")
-            #    env.visualize_map(config=self.best_config, show_map=True, tree_edges=self.get_edges_as_locs(), 
-            #        best_configs=self.get_configs_along_best_path(self.best_config), best_inspected_pts=self.best_pts)
- 
             current_coverage = self.tree.max_coverage
             self.update_best()
             
@@ -145,15 +139,13 @@ class RRTInspectionPlanner(object):
         total_cost = self.compute_cost(plan)
         duration = time.time()-start_time
 
-        if stats_mode:
-            return np.array(plan), [total_cost,num_iter,duration]
+        if not stats_mode:
+            # Print total number of iterations, path cost, and time
+            print(f"Total number of iterations needed to reach goal: {num_iter}")
+            print('Total cost of path: {:.2f}'.format(total_cost))
+            print('Total time: {:.2f} [sec]'.format(duration))
 
-        # Print total number of iterations, path cost, and time
-        print(f"Total number of iterations needed to reach goal: {num_iter}")
-        print('Total cost of path: {:.2f}'.format(total_cost))
-        print('Total time: {:.2f} [sec]'.format(duration))
-
-        return np.array(plan), None
+        return np.array(plan), [total_cost,num_iter,duration]
 
     def compute_cost(self, plan):
         '''
@@ -169,7 +161,7 @@ class RRTInspectionPlanner(object):
         @param near_config The nearest configuration to the sampled configuration.
         @param rand_config The sampled configuration.
         '''
-        # TODO: Task 2.4
+        # TODO: Task 2.4 - DONE
         vec = np.subtract(rand_config, near_config) 
         vec_mag = np.linalg.norm(vec,2)
         unit_vec = vec / vec_mag
@@ -233,16 +225,16 @@ class RRTInspectionPlanner(object):
                 v_curr_idx = dists[i]['Vertex'] # get the index of the vertex in the tree that currently corresponds to that config
                 v_curr = self.tree.vertices[v_curr_idx]
             
+            #cost = self.planning_env.robot.compute_distance(v_curr.config, self.best_config)
+            cost = dists[i]['Dist']
+            old_cost = v_curr.cost # get the original cost of the rewired vertex
+            self.tree.vertices[v_curr_idx].cost = self.tree.vertices[self.best_idx].cost + cost # update the cost of the path to the vertex
+
             insp_pts_new = self.planning_env.get_inspected_points(v_curr.config) # check all points seen by the new config
             insp_pts_newer = self.planning_env.compute_union_of_points(self.best_pts, insp_pts_new) # take the union of the inspected points of the parent and child vertex
-
-            cost = self.planning_env.robot.compute_distance(v_curr.config, self.best_config)
-            old_cost = v_curr.cost # get the original cost of the rewired vertex
-
-            self.tree.vertices[v_curr_idx].cost = self.tree.vertices[self.best_idx].cost + cost # update the cost of the path to the vertex
             self.tree.vertices[v_curr_idx].inspected_points = insp_pts_newer # update the inspected points seen along the path to the vertex
-            self.tree.edges[v_curr_idx] = self.best_idx # update the edge between the current best config and the new config (old vertex)
             
+            self.tree.edges[v_curr_idx] = self.best_idx # update the edge between the current best config and the new config (old vertex)
             self.tree.max_coverage = self.planning_env.compute_coverage(inspected_points=insp_pts_newer) # update the max. coverage (this should always increase it)
             self.tree.max_coverage_id = v_curr_idx
             
@@ -321,62 +313,3 @@ class RRTInspectionPlanner(object):
         best_configs.append(parent_config)
 
         return best_configs
-    
-    """
-    # If missing_pts is still empty at this point, this means that all the inspected points we've seen so far are seen along the best path
-        if len(missing_pts) == 0:
-            if not stats_mode:
-                print("\tNo missing points! Attempting to produce new ones...")
-            for i in self.all_insp_pts:
-                if tuple(i) not in list(self.points_inspected.keys()):
-                    count = 0
-                    not_found = True
-                    while count < 10000 and not_found: # bias towards configs with better coverage opportunities
-                        config = np.random.uniform(low=-np.pi, high=np.pi, size=(4,))
-                        if not self.planning_env.config_validity_checker(config) or not self.planning_env.edge_validity_checker(config, self.best_config): # ensure that the sampled configuration is valid
-                            continue
-                        pts = self.planning_env.get_inspected_points(config)
-                        if i in pts:
-                            missing_pts.append(tuple(i))
-                            not_found = False
-                            self.points_inspected[tuple(i)] = [config] # check that this line works as expected
-                        #if not not_found:
-                            new_idx = self.tree.add_vertex(config, inspected_points=pts) # fake vertex
-                            self.tree.add_edge(new_idx, 0, edge_cost=0) # fake edge
-                            # Todo: Check that this loop works as intended
-                        count += 1
-                    if not_found and not stats_mode:
-                        print("\t\tBad Morb :(")
-                else:
-                    if tuple(i) not in self.best_pts: # This should never occur
-                        print("uwu?")
-                        print(self.points_inspected)
-                        print(tuple(i))
-                        print(list(self.best_pts))
-            print()
-    """
-    """
-            for c in self.points_inspected[m]: # keep going until we find a valid config known to see this point
-                if np.allclose(c, self.best_config):
-                    continue
-                dist = self.planning_env.robot.compute_distance(c, self.best_config)
-                if (dist < best_dist) and self.planning_env.edge_validity_checker(c, self.best_config):
-                    best_dist = dist
-                    new_config = c
-            """
-            #c = self.points_inspected[m]
-            #dist = self.planning_env.robot.compute_distance(c, self.best_config)
-            #dists.append({'Config':c,'Dist':dist})
-
-            #if self.ext_mode == 'E2':
-                #    new_config = self.extend(self.best_config, dists[i]['Config'])
-                #    if new_config is None:
-                #        continue
-                #else:
-                #new_config = dists[i]['Config']
-
-                #if self.ext_mode == 'E2':
-            #    if new_config is not None:
-            #        return new_config, True
-            #    else:
-            #        return None, False
